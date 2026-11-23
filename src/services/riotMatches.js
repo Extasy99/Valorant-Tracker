@@ -2,7 +2,7 @@ const HENRIK_API_KEY = import.meta.env.VITE_HENRIK_API_KEY;
 const REGIAO = import.meta.env.VITE_HENRIK_REGION || 'br';
 
 /**
- * Busca partidas reais diretamente no navegador usando a API da HenrikDev
+ * Busca partidas reais competitivas diretamente no navegador usando a API da HenrikDev
  * e converte para o formato interno padrão do projeto.
  * @param {string} riotId Ex: "Nome#TAG"
  */
@@ -25,6 +25,9 @@ export async function buscarPartidasRiot(riotId) {
   });
 
   if (!response.ok) {
+    if (response.status === 401) {
+      throw new Error('Chave da API HenrikDev inválida ou não autorizada (HTTP 401). Verifique o arquivo .env.');
+    }
     if (response.status === 404) {
       throw new Error(`Jogador "${riotId}" não encontrado na região ${REGIAO.toUpperCase()}.`);
     }
@@ -38,7 +41,7 @@ export async function buscarPartidasRiot(riotId) {
   const partidasBrutas = json.data || [];
 
   if (partidasBrutas.length === 0) {
-    throw new Error(`Nenhuma partida recente encontrada para "${riotId}".`);
+    throw new Error(`Nenhuma partida competitiva recente encontrada para "${riotId}".`);
   }
 
   return {
@@ -53,10 +56,6 @@ export async function buscarPartidasRiot(riotId) {
   };
 }
 
-/**
- * Traduz uma partida da HenrikDev (v3/matches) para o formato interno
- * esperado por `utils/statsCalculator.js`.
- */
 function normalizarPartidaHenrik(partida, gameName, tagLine) {
   const alvoNome = gameName.toLowerCase();
   const alvoTag = tagLine.toLowerCase();

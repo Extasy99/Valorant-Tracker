@@ -1,6 +1,6 @@
 /**
  * Motor de cálculo de estatísticas de armas.
- * Totalmente independente da origem dos dados (Mock ou API oficial da Riot).
+ * Independente da origem dos dados (Mock ou API HenrikDev).
  */
 
 export function calcularEstatisticasArmas(partidas, mapaArmas) {
@@ -29,15 +29,11 @@ export function calcularEstatisticasArmas(partidas, mapaArmas) {
     for (const round of partida.rounds || []) {
       totalRoundsGeral += 1;
 
-      // 1. Contabiliza abates pela arma que finalizou o oponente
       for (const abate of round.abates || []) {
         const entry = garantirArma(abate.armaId);
-        if (entry) {
-          entry.abates += 1;
-        }
+        if (entry) entry.abates += 1;
       }
 
-      // 2. Contabiliza dano, tiros e rounds jogados pela arma equipada
       const equipada = garantirArma(round.armaEquipadaId);
       if (equipada) {
         equipada.roundsUsada += 1;
@@ -70,7 +66,6 @@ export function calcularEstatisticasArmas(partidas, mapaArmas) {
     })
     .sort((a, b) => b.abates - a.abates);
 
-  // Resumo geral do jogador
   const totais = listaArmas.reduce(
     (acc, a) => {
       acc.abates += a.abates;

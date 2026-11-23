@@ -1,10 +1,8 @@
 /**
  * Gerador determinístico de partidas simuladas (Mock).
- * Usa os UUIDs REAIS retornados pela valorant-api.com para que toda a
- * interface, ícones, filtros e cálculos funcionem exatamente como em produção.
+ * Usa os UUIDs REAIS retornados pela valorant-api.com.
  */
 
-// Perfis de peso para deixar os números realistas (Rifles e Pistolas aparecem mais)
 const PERFIL_ARMAS = [
   { nome: 'Vandal', peso: 28, hsBase: 0.34, danoMedio: 158 },
   { nome: 'Phantom', peso: 20, hsBase: 0.28, danoMedio: 146 },
@@ -55,16 +53,9 @@ function sortearArma(armasDisponiveis, rand) {
   return armasDisponiveis[0];
 }
 
-/**
- * Retorna partidas simuladas no FORMATO INTERNO PADRÃO do projeto.
- * @param {string} riotId Ex: "Aspas#BR1"
- * @param {Record<string, object>} mapaArmas Dicionário carregado da valorant-api.com
- */
 export async function buscarPartidasMock(riotId, mapaArmas) {
-  // Simula uma pequena latência de rede para testar o estado de loading
   await new Promise((resolve) => setTimeout(resolve, 350));
 
-  // Mapeia os nomes do perfil para os UUIDs reais da valorant-api.com
   const porNome = {};
   for (const arma of Object.values(mapaArmas)) {
     porNome[arma.nome.toLowerCase()] = arma.uuid;
@@ -80,18 +71,15 @@ export async function buscarPartidasMock(riotId, mapaArmas) {
   const rand = criarGeradorAleatorio(hashString(riotId.toLowerCase().trim()));
   const totalPartidas = 20;
   const partidas = [];
-
-  // Fator de habilidade individual baseado no Riot ID
   const bonusPrecisao = (rand() - 0.45) * 0.1;
 
   for (let m = 0; m < totalPartidas; m++) {
-    const totalRounds = 18 + Math.floor(rand() * 8); // 18 a 25 rounds
+    const totalRounds = 18 + Math.floor(rand() * 8);
     const rounds = [];
 
     for (let r = 0; r < totalRounds; r++) {
       const escolhida = sortearArma(armasDisponiveis, rand);
 
-      // Quantidade de abates no round (0 a 4)
       const rollKills = rand();
       let qtdAbates = 0;
       if (rollKills > 0.96) qtdAbates = 4;
@@ -103,7 +91,6 @@ export async function buscarPartidasMock(riotId, mapaArmas) {
         armaId: escolhida.uuid,
       }));
 
-      // Tiros acertados no round
       const totalTiros = qtdAbates > 0
         ? qtdAbates * (1 + Math.floor(rand() * 3))
         : (rand() > 0.5 ? 1 + Math.floor(rand() * 2) : 0);

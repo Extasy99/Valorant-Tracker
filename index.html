@@ -12,7 +12,100 @@
     />
   </head>
   <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
+    <div class="app-shell">
+      <header class="header">
+        <div class="container header-inner">
+          <div class="brand">
+            <div class="brand-icon" aria-hidden="true">⌖</div>
+            <div>
+              <span class="brand-title">VALTRACK</span>
+              <span class="brand-subtitle">Weapon Analytics</span>
+            </div>
+          </div>
+
+          <form id="search-form" class="search-form">
+            <div class="search-input-wrap">
+              <span class="search-icon" aria-hidden="true">🔍</span>
+              <input
+                id="search-input"
+                type="text"
+                value="Aspas#BR1"
+                placeholder="Digite um Riot ID (ex: Nome#BR1)"
+                aria-label="Buscar Riot ID"
+              />
+            </div>
+            <button id="search-btn" type="submit" class="btn-primary">Analisar</button>
+          </form>
+
+          <div id="mode-badge" class="mode-badge mock">
+            <span id="mode-badge-text">Modo Mock</span>
+          </div>
+        </div>
+
+        <div id="suggestions-bar" class="container suggestions-bar">
+          <span class="suggestions-label">Perfis rápidos:</span>
+        </div>
+      </header>
+
+      <main class="container main-content">
+        <div id="info-banner" class="info-banner hidden">
+          <strong>Modo Simulação ativo:</strong> Os ícones, preços e fichas técnicas das armas vêm em tempo real da
+          <code>valorant-api.com</code>, enquanto as partidas são simuladas em <code>src/services/mockMatches.js</code>.
+          Para usar partidas reais, configure <code>VITE_USE_MOCK=false</code> e sua chave no <code>.env</code>.
+        </div>
+
+        <div id="error-banner" class="error-banner hidden"></div>
+
+        <div id="loading-state" class="loading-state hidden">
+          <div class="spinner"></div>
+          <p>Carregando dados das armas e calculando estatísticas...</p>
+        </div>
+
+        <div id="dashboard-content" class="hidden">
+          <section id="summary-section" class="summary-section"></section>
+
+          <section class="table-section">
+            <div class="section-header">
+              <h2>Desempenho por Arma</h2>
+              <span class="hint">Clique em qualquer arma para ver a ficha técnica completa</span>
+            </div>
+
+            <div class="filters-bar">
+              <div id="category-tabs" class="category-tabs"></div>
+
+              <div class="filters-right">
+                <div class="mini-input">
+                  <input id="filter-name" type="text" placeholder="Filtrar arma..." />
+                </div>
+
+                <div class="mini-select">
+                  <select id="sort-select" aria-label="Ordenar armas">
+                    <option value="abates">Mais Abates</option>
+                    <option value="hsPercent">Maior HS%</option>
+                    <option value="danoPorRound">Maior Dano/Round</option>
+                    <option value="abatesPorRound">Maior Abates/Round</option>
+                    <option value="roundsUsada">Mais Rounds Usada</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div id="table-container"></div>
+          </section>
+        </div>
+      </main>
+
+      <div id="weapon-modal" class="modal-backdrop hidden"></div>
+
+      <footer class="footer">
+        <div class="container">
+          Dados estáticos de armas fornecidos por
+          <a href="https://valorant-api.com" target="_blank" rel="noreferrer">valorant-api.com</a>.
+          Este projeto não é afiliado à Riot Games.
+        </div>
+      </footer>
+    </div>
+
+    <script type="module" src="/src/main.js"></script>
   </body>
 </html>

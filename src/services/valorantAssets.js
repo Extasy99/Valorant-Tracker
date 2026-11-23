@@ -4,7 +4,6 @@ const CACHE_TTL_MS = 1000 * 60 * 60 * 24; // 24 horas
 /**
  * Busca todas as armas na API pública valorant-api.com (em pt-BR)
  * e devolve um dicionário indexado pelo UUID em minúsculo.
- * Usa localStorage para evitar requisições repetidas.
  */
 export async function carregarMapaDeArmas(forcarAtualizacao = false) {
   if (!forcarAtualizacao) {
