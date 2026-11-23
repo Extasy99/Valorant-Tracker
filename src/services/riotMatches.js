@@ -16,7 +16,7 @@ export async function buscarPartidasRiot(riotId) {
     throw new Error('Chave VITE_HENRIK_API_KEY não encontrada no arquivo .env.');
   }
 
-  const url = `https://api.henrikdev.xyz/valorant/v3/matches/${REGIAO}/${encodeURIComponent(gameName)}/${encodeURIComponent(tagLine)}?size=10`;
+  const url = `https://api.henrikdev.xyz/valorant/v3/matches/${REGIAO}/${encodeURIComponent(gameName)}/${encodeURIComponent(tagLine)}?mode=competitive&size=10`;
 
   const response = await fetch(url, {
     headers: {
