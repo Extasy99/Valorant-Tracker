@@ -1,18 +1,9 @@
-/**
- * Integração REAL com a API de partidas (via seu Backend Proxy).
- *
- * IMPORTANTE:
- * Nunca coloque sua RIOT_API_KEY diretamente no frontend (navegador),
- * pois além de expor sua chave publicamente, a API da Riot bloqueia CORS.
- *
- * Fluxo recomendado em produção:
- * Frontend (este arquivo) -> Seu Backend (server/riotProxyExample.js) -> Riot Games API
- */
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
+const HENRIK_API_KEY = import.meta.env.VITE_HENRIK_API_KEY;
+const REGIAO = import.meta.env.VITE_HENRIK_REGION || 'br';
 
 /**
- * Busca partidas reais no seu backend e normaliza para o formato interno do site.
+ * Busca partidas reais diretamente no navegador usando a API da HenrikDev
+ * e converte para o formato interno padrão do projeto.
  * @param {string} riotId Ex: "Nome#TAG"
  */
 export async function buscarPartidasRiot(riotId) {
@@ -21,38 +12,71 @@ export async function buscarPartidasRiot(riotId) {
     throw new Error('Informe o Riot ID no formato Nome#TAG (ex: Aspas#BR1).');
   }
 
-  const url = `${API_BASE_URL}/api/matches/${encodeURIComponent(gameName)}/${encodeURIComponent(tagLine)}`;
-  const response = await fetch(url);
-
-  if (!response.ok) {
-    const erro = await response.json().catch(() => ({}));
-    throw new Error(erro.message || `Erro ao consultar partidas na API (HTTP ${response.status})`);
+  if (!HENRIK_API_KEY) {
+    throw new Error('Chave VITE_HENRIK_API_KEY não encontrada no arquivo .env.');
   }
 
-  const dados = await response.json();
+  const url = `https://api.henrikdev.xyz/valorant/v3/matches/${REGIAO}/${encodeURIComponent(gameName)}/${encodeURIComponent(tagLine)}?size=10`;
 
-  // Converte o JSON bruto da Riot (VAL-MATCH-V1) para o formato padrão interno
+  const response = await fetch(url, {
+    headers: {
+      Authorization: HENRIK_API_KEY,
+    },
+  });
+
+  if (!response.ok) {
+    if (response.status === 404) {
+      throw new Error(`Jogador "${riotId}" não encontrado na região ${REGIAO.toUpperCase()}.`);
+    }
+    if (response.status === 429) {
+      throw new Error('Limite de requisições da API atingido. Aguarde alguns segundos e tente novamente.');
+    }
+    throw new Error(`Erro na API HenrikDev (HTTP ${response.status}).`);
+  }
+
+  const json = await response.json();
+  const partidasBrutas = json.data || [];
+
+  if (partidasBrutas.length === 0) {
+    throw new Error(`Nenhuma partida recente encontrada para "${riotId}".`);
+  }
+
   return {
     jogador: {
-      riotId: `${dados.gameName}#${dados.tagLine}`,
-      regiao: dados.region || 'BR',
-      partidasAnalisadas: dados.matches.length,
+      riotId: `${gameName}#${tagLine}`,
+      regiao: REGIAO.toUpperCase(),
+      partidasAnalisadas: partidasBrutas.length,
     },
-    partidas: dados.matches.map((partida) => normalizarPartidaRiot(partida, dados.puuid)),
+    partidas: partidasBrutas.map((partida) =>
+      normalizarPartidaHenrik(partida, gameName, tagLine)
+    ),
   };
 }
 
 /**
- * Traduz uma partida da API oficial VAL-MATCH-V1 da Riot para o formato interno
+ * Traduz uma partida da HenrikDev (v3/matches) para o formato interno
  * esperado por `utils/statsCalculator.js`.
  */
-export function normalizarPartidaRiot(partidaRiot, puuidJogador) {
-  const rounds = (partidaRiot.roundResults || []).map((round) => {
-    const playerRound = (round.playerStats || []).find((p) => p.puuid === puuidJogador);
+function normalizarPartidaHenrik(partida, gameName, tagLine) {
+  const alvoNome = gameName.toLowerCase();
+  const alvoTag = tagLine.toLowerCase();
+
+  const jogadorInfo = (partida.players?.all_players || []).find(
+    (p) => p.name?.toLowerCase() === alvoNome && p.tag?.toLowerCase() === alvoTag
+  );
+  const puuidJogador = jogadorInfo?.puuid;
+  const displayAlvo = `${alvoNome}#${alvoTag}`;
+
+  const rounds = (partida.rounds || []).map((round, index) => {
+    const playerRound = (round.player_stats || []).find((p) =>
+      puuidJogador
+        ? p.player_puuid === puuidJogador
+        : p.player_display_name?.toLowerCase() === displayAlvo
+    );
 
     if (!playerRound) {
       return {
-        numero: round.roundNum + 1,
+        numero: index + 1,
         armaEquipadaId: null,
         abates: [],
         dano: 0,
@@ -62,9 +86,9 @@ export function normalizarPartidaRiot(partidaRiot, puuidJogador) {
       };
     }
 
-    const abates = (playerRound.kills || [])
+    const abates = (playerRound.kill_events || [])
       .map((k) => ({
-        armaId: k.finishingDamage?.damageItem?.toLowerCase() || null,
+        armaId: k.damage_weapon_id?.toLowerCase() || null,
       }))
       .filter((k) => Boolean(k.armaId));
 
@@ -73,7 +97,7 @@ export function normalizarPartidaRiot(partidaRiot, puuidJogador) {
     let bodyshots = 0;
     let legshots = 0;
 
-    for (const d of playerRound.damage || []) {
+    for (const d of playerRound.damage_events || []) {
       dano += d.damage || 0;
       headshots += d.headshots || 0;
       bodyshots += d.bodyshots || 0;
@@ -81,8 +105,8 @@ export function normalizarPartidaRiot(partidaRiot, puuidJogador) {
     }
 
     return {
-      numero: round.roundNum + 1,
-      armaEquipadaId: playerRound.economy?.weapon?.toLowerCase() || null,
+      numero: index + 1,
+      armaEquipadaId: playerRound.economy?.weapon?.id?.toLowerCase() || null,
       abates,
       dano,
       headshots,
@@ -92,8 +116,8 @@ export function normalizarPartidaRiot(partidaRiot, puuidJogador) {
   });
 
   return {
-    matchId: partidaRiot.matchInfo?.matchId || 'unknown',
-    mapa: partidaRiot.matchInfo?.mapId || 'Desconhecido',
+    matchId: partida.metadata?.matchid || 'unknown',
+    mapa: partida.metadata?.map || 'Desconhecido',
     rounds,
   };
 }
